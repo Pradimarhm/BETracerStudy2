@@ -12,7 +12,15 @@ class UpdateNewsRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('news'));
+        // return $this->user()->can('update', $this->route('news'));
+        // 1. Ambil ID dari rute {id}
+        $newsId = $this->route('id');
+
+        // 2. Cari data beritanya dari database
+        $news = \App\Models\News::find($newsId);
+
+        // 3. Masukkan ke Policy
+        return $news && $this->user()->can('update', $news);
     }
 
     /**
@@ -22,7 +30,8 @@ class UpdateNewsRequest extends FormRequest
      */
     public function rules(): array
     {
-        $newsId = $this->route('news')->id;
+        // $newsId = $this->route('news')->id;
+        $newsId = $this->route('id');
 
         return [
             'title' => 'sometimes|string|max:255|unique:news,title,' . $newsId,

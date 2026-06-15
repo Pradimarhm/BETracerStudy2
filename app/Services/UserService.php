@@ -23,7 +23,8 @@ class UserService
             if ($user->role === 'alumni') {
                 Alumni::create([
                     'user_id' => $user->id,
-                    'name' => $user->username,
+                    // 'name' => $user->username,
+                    'name' => $data['name'],
                 ]);
             }
 

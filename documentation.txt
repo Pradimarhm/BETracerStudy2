@@ -1,397 +1,81 @@
+# Dokumentasi Backend API Tracer Study
 
-**Penjelasan Komponen Kunci:**
+## 1. Pendahuluan
+Proyek ini adalah sistem backend untuk aplikasi Tracer Study yang dibangun menggunakan framework Laravel. Sistem ini mengelola data alumni, kuesioner, berita, dan lowongan pekerjaan.
 
-*   **`app/Models`**: Berisi definisi objek data (Model) yang berinteraksi dengan database melalui Eloquent ORM.
-*   **`app/Contracts/Repositories`**: Direktori ini berisi antarmuka (interfaces) untuk repository. Ini adalah inti dari Repository Pattern, yang mengabstraksi lapisan persistensi data dari logika bisnis.
-*   **`app/Repositories` (diasumsikan ada)**: Implementasi dari antarmuka repository yang akan berinteraksi langsung dengan model Eloquent atau sumber data lainnya. (Tidak ada file .php yang disediakan dalam context, tetapi diasumsikan ada implementasinya).
-*   **`app/Services`**: Berisi lapisan layanan (Service Layer) yang mengimplementasikan logika bisnis utama aplikasi. Layanan ini menggunakan repository untuk mengakses dan memanipulasi data.
-*   **`app/Policies`**: Mendefinisikan aturan otorisasi untuk model tertentu, memungkinkan kontrol akses yang granular.
-*   **`routes/api.php`**: Akan berisi definisi semua endpoint API yang diekspos oleh backend.
+## 2. Arsitektur Sistem
+Aplikasi ini menggunakan pola arsitektur **Service-Repository Pattern** untuk memisahkan logika bisnis dari akses data:
 
-## 4. Database yang Digunakan
+*   **Models**: Definisi entitas data menggunakan Eloquent ORM.
+*   **Contracts (Interfaces)**: Abstraksi untuk Repository (e.g., `UserRepositoryInterface`).
+*   **Repositories**: Implementasi akses data langsung ke database.
+*   **Services**: Lapisan logika bisnis utama (e.g., `UserService`, `AlumniService`).
+*   **Controllers**: Menangani request HTTP, memanggil Service, dan mengembalikan JSON Response.
+*   **Resources**: Transformasi model database menjadi format JSON API yang konsisten.
 
-Proyek ini menggunakan **Eloquent ORM** (Object-Relational Mapper) bawaan Laravel. Eloquent mendukung berbagai sistem manajemen database relasional (RDBMS) seperti:
-*   **MySQL** (paling umum)
-*   PostgreSQL
-*   SQLite
-*   SQL Server
-
-Konfigurasi database spesifik akan ditentukan dalam file `.env` dan `config/database.php`. Tanpa file tersebut, diasumsikan dapat menggunakan salah satu dari yang disebutkan di atas, dengan MySQL sebagai pilihan default yang paling sering digunakan dalam proyek Laravel.
-
-## 5. Sistem Otentikasi dan Otorisasi
+## 3. Sistem Otentikasi dan Otorisasi
 
 ### Otentikasi
-Proyek ini menggunakan **Laravel Sanctum** untuk otentikasi API. Ini terlihat dari penggunaan trait `HasApiTokens` pada model `App\Models\User`. Sanctum memungkinkan otentikasi berbasis token API ringan untuk SPA (Single Page Applications) dan aplikasi mobile.
-
-**Alur Otentikasi Sanctum:**
-1.  Pengguna mengirimkan kredensial (misalnya email/username dan password) ke endpoint login API.
-2.  Backend memvalidasi kredensial.
-3.  Jika valid, backend membuat token API baru untuk pengguna tersebut dan mengembalikannya ke frontend.
-4.  Frontend menyimpan token ini (misalnya di `localStorage` atau `sessionStorage`).
-5.  Untuk setiap permintaan API berikutnya yang memerlukan otentikasi, frontend menyertakan token ini dalam header `Authorization` (misalnya `Bearer <token>`).
-6.  Backend memvalidasi token untuk setiap permintaan untuk memastikan pengguna terotentikasi.
+Sistem menggunakan **Laravel Sanctum** untuk otentikasi berbasis token.
+1.  **Login**: User mengirimkan email dan password ke `/api/login`.
+2.  **Token**: Jika valid, sistem mengembalikan `access_token` (Bearer Token).
+3.  **Logout**: Token dihapus dari sistem untuk mengakhiri sesi.
 
 ### Otorisasi
-Otorisasi dikelola menggunakan **Laravel Policies**. Contohnya adalah `App\Policies\UserPolicy.php` yang mendefinisikan siapa yang berhak `view`, `create`, `update`, `delete` `User` model, berdasarkan peran (`admin`) atau kepemilikan (`user->id === model->id`).
+Akses kontrol dibatasi menggunakan middleware:
+*   `auth:sanctum`: Memastikan user telah login.
+*   `role:admin`: Membatasi akses hanya untuk pengguna dengan peran admin (seperti pengelolaan user, berita, dan lowongan).
 
-## 6. Potensi Integrasi Firebase di Frontend
+## 4. Daftar API Endpoints
 
-**Ya, proyek ini dapat diintegrasikan dengan Firebase Authentication di sisi frontend.**
+### A. Otentikasi
+*   `POST /api/login`: Otentikasi pengguna.
+*   `POST /api/logout`: Menghapus sesi (Perlu login).
 
-**Alur Integrasi yang Disarankan:**
+### B. Manajemen Alumni (Perlu Login)
+*   `GET /api/alumni/me`: Mendapatkan profil alumni yang sedang login.
+*   `POST /api/alumni/update`: Memperbarui profil (termasuk update data user).
+*   `GET /api/alumni`: Mendapatkan daftar semua alumni.
 
-1.  **Frontend (Next.js)** menggunakan **Firebase SDK** untuk otentikasi:
-    *   **Login Email/Password:** Pengguna login menggunakan Firebase `signInWithEmailAndPassword()`.
-    *   **Login Google:** Pengguna login menggunakan Firebase `signInWithPopup(GoogleAuthProvider)` atau `signInWithRedirect()`.
-2.  Setelah pengguna berhasil login di Firebase, Firebase akan mengembalikan **Firebase ID Token**.
-3.  **Frontend** akan mengambil Firebase ID Token ini.
-4.  **Frontend** kemudian mengirimkan Firebase ID Token ini ke backend Laravel melalui endpoint khusus (misalnya `/api/firebase-auth`).
-5.  **Backend (Laravel)** akan:
-    *   Menerima Firebase ID Token.
-    *   Menggunakan **Firebase Admin SDK** (melalui Composer package seperti `kreait/laravel-firebase`) untuk memverifikasi validitas Firebase ID Token.
-    *   Setelah token diverifikasi dan pengguna Firebase diidentifikasi, backend akan mencari atau membuat pengguna yang sesuai di database lokalnya (model `App\Models\User`).
-    *   Backend kemudian membuat **token Laravel Sanctum** untuk pengguna lokal tersebut.
-    *   Backend mengembalikan token Sanctum ini ke frontend.
-6.  **Frontend** kemudian menggunakan token Sanctum ini untuk semua permintaan API berikutnya ke backend Laravel, sama seperti otentikasi Sanctum reguler.
-
-**Keuntungan:**
-*   Memanfaatkan keamanan dan kemudahan Firebase Authentication.
-*   Backend tetap mengontrol sesi API-nya sendiri dengan Sanctum, memisahkan concern otentikasi pihak ketiga dari otentikasi aplikasi internal.
-
-## 7. Alur API Lengkap
-
-Berikut adalah perkiraan alur API berdasarkan Services dan Policies yang ditemukan:
-
-### A. Otentikasi & Profil Pengguna
-
-1.  **Registrasi Pengguna Baru (Asumsi)**
-    *   **Endpoint:** `POST /api/register`
-    *   **Deskripsi:** Mendaftarkan pengguna baru dan mungkin membuat entri alumni terkait.
-    *   **Input:** `username`, `email`, `password`, dan data alumni lainnya.
-    *   **Output:** Token Sanctum, data pengguna.
-    *   **Service:** (Asumsi ada)
-    *   **Policy:** N/A (biasanya publik)
-
-2.  **Login Pengguna (Asumsi)**
-    *   **Endpoint:** `POST /api/login`
-    *   **Deskripsi:** Mengotentikasi pengguna dan mengembalikan token API.
-    *   **Input:** `email`/`username`, `password`.
-    *   **Output:** Token Sanctum, data pengguna.
-    *   **Service:** (Asumsi ada)
-    *   **Policy:** N/A (publik)
-
-3.  **Dapatkan Profil Alumni Berdasarkan User ID**
-    *   **Endpoint:** `GET /api/alumni/profile/{userId}` (atau `/api/user/profile` jika terotentikasi)
-    *   **Deskripsi:** Mengambil data profil alumni terkait dengan user ID.
-    *   **Input:** `userId` (dari URL atau dari token otentikasi).
-    *   **Output:** Objek `Alumni` lengkap.
-    *   **Service:** `AlumniService::getProfileByUserId`
-    *   **Policy:** `UserPolicy::view` (admin atau pemilik profil)
-
-4.  **Perbarui Profil Alumni**
-    *   **Endpoint:** `PUT /api/alumni/profile/{userId}` (atau `/api/user/profile` jika terotentikasi)
-    *   **Deskripsi:** Memperbarui data pengguna (`users` table) dan data alumni (`alumnis` table). Dapat juga mengelola upload foto profil.
-    *   **Input:** `userId` (dari URL atau dari token otentikasi), `name` (untuk `username`), `email`, `password` (opsional), `img_profile` (file), dan data alumni lainnya.
-    *   **Output:** Objek `Alumni` yang telah diperbarui.
-    *   **Service:** `AlumniService::updateProfile`
-    *   **Policy:** `UserPolicy::update` (admin atau pemilik profil)
-
-5.  **Dapatkan Semua Data Alumni**
-    *   **Endpoint:** `GET /api/alumni`
-    *   **Deskripsi:** Mengambil semua data alumni.
-    *   **Input:** N/A
-    *   **Output:** Koleksi objek `Alumni`.
-    *   **Service:** `AlumniService::getAllAlumni`
-    *   **Policy:** `UserPolicy::viewAny` (hanya admin)
-
-### B. Berita / Informasi
-
-1.  **Dapatkan Berita yang Dipublikasikan**
-    *   **Endpoint:** `GET /api/news/published`
-    *   **Deskripsi:** Mengambil daftar berita yang berstatus publik.
-    *   **Input:** N/A
-    *   **Output:** Koleksi objek `News` yang dipublikasikan.
-    *   **Service:** `NewsService::getPublishedNews`
-    *   **Policy:** N/A (biasanya publik)
-
-2.  **Dapatkan Berita Berdasarkan Slug**
-    *   **Endpoint:** `GET /api/news/{slug}`
-    *   **Deskripsi:** Mengambil detail berita berdasarkan slug uniknya.
-    *   **Input:** `slug` dari URL.
-    *   **Output:** Objek `News` tunggal.
-    *   **Service:** `NewsService::getNewsBySlug`
-    *   **Policy:** N/A (biasanya publik)
-
-3.  **Buat Berita Baru**
-    *   **Endpoint:** `POST /api/news`
-    *   **Deskripsi:** Membuat entri berita baru.
-    *   **Input:** `userId` (dari token otentikasi), `title`, `content`, `thumbnail` (file), `is_published` (boolean), dll.
-    *   **Output:** Objek `News` yang baru dibuat.
-    *   **Service:** `NewsService::storeNews`
-    *   **Policy:** Diperlukan middleware `role:admin`.
-
-### C. Sistem Kuesioner (Tracer Study)
-
-1.  **Dapatkan Daftar Kuesioner Aktif**
-    *   **Endpoint:** `GET /api/questionnaires`
-    *   **Deskripsi:** Mengambil kuesioner yang tersedia untuk diisi oleh alumni.
-    *   **Service:** `QuestionnaireRepositoryInterface::getActiveWithQuestions`
-    *   **Otentikasi:** Bearer Token (Sanctum).
-
-2.  **Submit Jawaban Kuesioner**
-    *   **Endpoint:** `POST /api/questionnaires/submit`
-    *   **Deskripsi:** Menyimpan jawaban alumni terhadap pertanyaan kuesioner.
-    *   **Input:** `question_id`, `answer_value`, `alumni_id`.
-    *   **Service:** (Logika di `QuestionnaireController` atau service terkait).
-
-3.  **Lihat Jawaban Saya**
-    *   **Endpoint:** `GET /api/questionnaires/{id}/my-answers`
-    *   **Deskripsi:** Melihat riwayat jawaban yang telah dikirimkan oleh user yang sedang login.
+### C. Berita (News)
+*   `GET /api/news`: Menampilkan daftar berita yang dipublikasikan (Publik).
+*   `GET /api/news/{slug}`: Menampilkan detail berita berdasarkan slug (Publik).
+*   `POST /api/news`: Membuat berita baru (Admin).
+*   `POST /api/news/{id}`: Memperbarui berita/thumbnail (Admin).
+*   `DELETE /api/news/{id}`: Menghapus berita (Admin).
 
 ### D. Lowongan Pekerjaan (Job Vacancy)
+*   `GET /api/jobs`: Menampilkan daftar lowongan aktif (Publik).
+*   `POST /api/jobs`: Membuat lowongan baru (Admin).
+*   `POST /api/jobs/{id}`: Memperbarui lowongan (Admin).
+*   `DELETE /api/jobs/{id}`: Menghapus lowongan (Admin).
 
-1.  **List Lowongan (Publik)**
-    *   **Endpoint:** `GET /api/jobs`
-    *   **Deskripsi:** Menampilkan semua lowongan pekerjaan yang tersedia.
+### E. Kuesioner (Tracer Study)
+*   `GET /api/questionnaires`: Mendapatkan kuesioner aktif dan struktur pertanyaannya.
+*   `POST /api/questionnaires/submit`: Mengirimkan jawaban kuesioner.
+*   `GET /api/questionnaires/{id}/my-answers`: Melihat riwayat jawaban user.
 
-2.  **Kelola Lowongan (Admin Only)**
-    *   **Endpoint:** `POST /api/jobs`, `POST /api/jobs/{id}`, `DELETE /api/jobs/{id}`
-    *   **Deskripsi:** Operasi CRUD untuk admin mengelola informasi lowongan.
+### F. Manajemen User (Hanya Admin)
+*   `GET /api/users`: List semua user.
+*   `POST /api/users`: Membuat user baru (otomatis membuat record alumni jika role='alumni').
+*   `PUT /api/users/{id}`: Update data user.
+*   `DELETE /api/users/{id}`: Hapus user.
 
----
+## 5. Struktur Data Utama (Database)
 
-## 8. Rekomendasi Pengolahan Data di Frontend (Next.js)
+### Tabel `users`
+Menyimpan kredensial: `id`, `username`, `email`, `password`, `role` (admin/alumni).
 
-Untuk mengonsumsi API ini secara efisien di Next.js, berikut adalah arsitektur yang disarankan:
+### Tabel `alumnis`
+Detail alumni: `id`, `user_id`, `name`, `nim`, `nik`, `npwp`, `phone_number`, `img_profile`, `privacy_settings`, `tahun_lulus`, `kdpstmsmh`, `status`.
 
-### A. State Management & Data Fetching
-*   **TanStack Query (React Query):** Sangat direkomendasikan untuk menangani caching, loading states, error handling, dan revalidation data.
-    *   Gunakan `useQuery` untuk fetch profil alumni atau daftar berita.
-    *   Gunakan `useMutation` untuk proses login, submit kuesioner, dan update profil.
+### Tabel `news`
+Konten berita: `id`, `user_id`, `title`, `slug`, `content`, `thumbnail`, `category`, `is_published`.
 
-### B. Client API (Axios Instance)
-Buatlah sebuah instance axios yang secara otomatis menyertakan token Sanctum dari cookies atau local storage.
+### Tabel `job_vacancies`
+Informasi lowongan: `id`, `user_id`, `title`, `company`, `description`, `location`, `category`, `poster_image`, `is_active`, `expired_at`.
 
-```javascript
-// lib/axios.js
-import axios from 'axios';
+### Sistem Kuesioner
+Terdiri dari tabel `questionnaires`, `questions` (mendukung tipe text, radio, checkbox, dsb), `question_options`, dan `answers`.
 
-const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL,
-    headers: { 'Content-Type': 'application/json' }
-});
-
-api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
-
-// Contoh penggunaan TanStack Query di komponen Next.js
-/*
-// pages/dashboard.js atau components/Profile.js
-import { useQuery, useMutation, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import api from '../lib/axios'; // Asumsikan file axios instance Anda ada di lib/axios.js
-
-// Inisialisasi QueryClient di level aplikasi (misal di _app.js)
-const queryClient = new QueryClient();
-
-function ProfilePage() {
-    // Mengambil data profil alumni
-    const { data: alumniProfile, isLoading, isError, error } = useQuery({
-        queryKey: ['alumniProfile'],
-        queryFn: async () => {
-            const response = await api.get('/alumni/me');
-            return response.data;
-        },
-        // Opsi lain seperti staleTime, cacheTime, refetchOnWindowFocus, dll.
-    });
-
-    // Memperbarui profil alumni
-    const updateProfileMutation = useMutation({
-        mutationFn: async (profileData) => {
-            const response = await api.post('/alumni/update', profileData); // Menggunakan POST untuk form-data atau PUT
-            return response.data;
-        },
-        onSuccess: () => {
-            // Invalidasi cache setelah update berhasil agar data terbaru diambil
-            queryClient.invalidateQueries(['alumniProfile']);
-            alert('Profil berhasil diperbarui!');
-        },
-        onError: (err) => {
-            console.error('Gagal memperbarui profil:', err);
-            alert('Gagal memperbarui profil: ' + (err.response?.data?.message || err.message));
-        },
-    });
-
-    // ... render UI dengan data alumniProfile, isLoading, isError, dan updateProfileMutation
-}
-*/
-```
-
-### C. Sinkronisasi Firebase & Laravel Sanctum
-Karena Anda ingin menggunakan Firebase (Email & Google Login), alur di Next.js adalah sebagai berikut:
-
-1.  **User Login di FE:** Menggunakan `signInWithPopup(auth, googleProvider)`.
-2.  **Get Firebase Token:** `const idToken = await user.getIdToken()`.
-3.  **Exchange Token:** Kirim `idToken` ke Laravel.
-    ```javascript
-    // Di Next.js
-    const res = await api.post('/auth/firebase-exchange', { token: idToken });
-    localStorage.setItem('token', res.data.access_token);
-    ```
-4.  **Backend Verification:** Di Laravel, gunakan package `kreait/laravel-firebase` untuk memverifikasi token tersebut dan me-return Sanctum Token.
-
----
-
-## 9. Detail Teknis Database
-
-*   **Sistem:** RDBMS (MySQL direkomendasikan untuk produksi).
-*   **ORM:** Eloquent.
-*   **Fitur Kunci:**
-    *   **Soft Deletes:** Digunakan pada model User (berdasarkan `UserPolicy` yang memiliki method `restore`).
-    *   **Mass Assignment Protection:** Dikelola melalui properti `$fillable` di setiap Model.
-    *   **Automated Slugging:** Model `News` secara otomatis menghasilkan slug dari judul menggunakan Laravel `Str::slug`.
-
-### 9.A. Skema Database
-
-Berikut adalah struktur tabel utama yang digunakan dalam proyek ini, beserta kolom dan relasinya.
-
-#### Tabel `users`
-*   **Tujuan:** Menyimpan informasi dasar pengguna aplikasi (baik admin maupun alumni).
-*   **Diasumsikan Migrasi:** `create_users_table` (standar Laravel).
-| Kolom              | Tipe Data      | Deskripsi                                 |
-| :----------------- | :------------- | :---------------------------------------- |
-| `id`               | `BIGINT UNSIGNED AUTO_INCREMENT` | Primary Key, ID unik pengguna.            |
-| `username`         | `VARCHAR(255)` | Nama pengguna.                            |
-| `email`            | `VARCHAR(255) UNIQUE` | Alamat email pengguna, harus unik.      |
-| `email_verified_at`| `TIMESTAMP NULL` | Waktu verifikasi email (nullable).        |
-| `password`         | `VARCHAR(255)` | Hash kata sandi pengguna.                 |
-| `role`             | `VARCHAR(255)` | Peran pengguna (e.g., 'admin', 'alumni'). |
-| `remember_token`   | `VARCHAR(100) NULL` | Token untuk fitur "ingat saya".         |
-| `created_at`       | `TIMESTAMP NULL` | Waktu pembuatan record.                   |
-| `updated_at`       | `TIMESTAMP NULL` | Waktu terakhir record diperbarui.         |
-| `deleted_at`       | `TIMESTAMP NULL` | Untuk Soft Deletes.                       |
-
-#### Tabel `alumnis`
-*   **Tujuan:** Menyimpan detail informasi spesifik alumni.
-*   **Diasumsikan Migrasi:** `create_alumnis_table`.
-| Kolom              | Tipe Data      | Deskripsi                                          |
-| :----------------- | :------------- | :------------------------------------------------- |
-| `id`               | `BIGINT UNSIGNED AUTO_INCREMENT` | Primary Key, ID unik alumni.                       |
-| `user_id`          | `BIGINT UNSIGNED UNIQUE` | Foreign Key ke `users.id`, one-to-one relasi dengan pengguna. |
-| `name`             | `VARCHAR(255)` | Nama lengkap alumni.                               |
-| `img_profile`      | `VARCHAR(255) NULL` | Path ke gambar profil alumni.                      |
-| `nim`              | `VARCHAR(255) UNIQUE NULL` | Nomor Induk Mahasiswa.                             |
-| `major`            | `VARCHAR(255) NULL` | Jurusan atau program studi.                        |
-| `graduation_year`  | `YEAR NULL`    | Tahun kelulusan.                                   |
-| `phone_number`     | `VARCHAR(20) NULL` | Nomor telepon alumni.                              |
-| `address`          | `TEXT NULL`    | Alamat lengkap alumni.                             |
-| `linkedin_profile` | `VARCHAR(255) NULL` | URL profil LinkedIn.                               |
-| `created_at`       | `TIMESTAMP NULL` | Waktu pembuatan record.                            |
-| `updated_at`       | `TIMESTAMP NULL` | Waktu terakhir record diperbarui.                  |
-*   **Relasi:** `alumnis.user_id` `REFERENCES` `users.id` `ON DELETE CASCADE`.
-
-#### Tabel `news`
-*   **Tujuan:** Menyimpan artikel berita atau pengumuman.
-*   **Diasumsikan Migrasi:** `create_news_table`.
-| Kolom              | Tipe Data      | Deskripsi                                  |
-| :----------------- | :------------- | :----------------------------------------- |
-| `id`               | `BIGINT UNSIGNED AUTO_INCREMENT` | Primary Key, ID unik berita.               |
-| `user_id`          | `BIGINT UNSIGNED` | Foreign Key ke `users.id` (pembuat berita).|
-| `title`            | `VARCHAR(255)` | Judul berita.                              |
-| `slug`             | `VARCHAR(255) UNIQUE` | URL-friendly string dari judul.            |
-| `content`          | `LONGTEXT`     | Isi lengkap berita.                        |
-| `thumbnail`        | `VARCHAR(255) NULL` | Path ke gambar thumbnail berita.           |
-| `is_published`     | `BOOLEAN`      | Status publikasi (true/false).             |
-| `created_at`       | `TIMESTAMP NULL` | Waktu pembuatan record.                    |
-| `updated_at`       | `TIMESTAMP NULL` | Waktu terakhir record diperbarui.          |
-*   **Relasi:** `news.user_id` `REFERENCES` `users.id` `ON DELETE CASCADE`.
-
-#### Tabel `job_vacancies`
-*   **Tujuan:** Menyimpan informasi lowongan pekerjaan.
-*   **Diasumsikan Migrasi:** `create_job_vacancies_table`.
-| Kolom              | Tipe Data      | Deskripsi                                  |
-| :----------------- | :------------- | :----------------------------------------- |
-| `id`               | `BIGINT UNSIGNED AUTO_INCREMENT` | Primary Key, ID unik lowongan.             |
-| `user_id`          | `BIGINT UNSIGNED` | Foreign Key ke `users.id` (admin yang memposting).|
-| `title`            | `VARCHAR(255)` | Judul lowongan pekerjaan.                  |
-| `description`      | `LONGTEXT`     | Deskripsi detail lowongan.                 |
-| `company_name`     | `VARCHAR(255)` | Nama perusahaan penyedia lowongan.         |
-| `location`         | `VARCHAR(255) NULL` | Lokasi pekerjaan.                          |
-| `deadline`         | `DATE NULL`    | Batas waktu pendaftaran.                   |
-| `is_active`        | `BOOLEAN`      | Status lowongan aktif (true/false).        |
-| `created_at`       | `TIMESTAMP NULL` | Waktu pembuatan record.                    |
-| `updated_at`       | `TIMESTAMP NULL` | Waktu terakhir record diperbarui.          |
-*   **Relasi:** `job_vacancies.user_id` `REFERENCES` `users.id` `ON DELETE CASCADE`.
-
-#### Tabel `questionnaires`
-*   **Tujuan:** Mendefinisikan periode atau jenis kuesioner tracer study.
-*   **Migrasi:** `2026_05_07_162156_create_tracer_questions_table.php`
-| Kolom         | Tipe Data                      | Deskripsi                          |
-| :------------ | :----------------------------- | :--------------------------------- |
-| `id`          | `BIGINT UNSIGNED AUTO_INCREMENT` | Primary Key.                       |
-| `title`       | `VARCHAR(255)`                 | Judul kuesioner (e.g., "Tracer Study Lulusan 2026"). |
-| `year`        | `YEAR`                         | Tahun kuesioner.                   |
-| `is_active`   | `BOOLEAN` `DEFAULT TRUE`       | Status kuesioner (aktif/tidak aktif).|
-| `created_at`  | `TIMESTAMP NULL`               | Waktu pembuatan record.            |
-| `updated_at`  | `TIMESTAMP NULL`               | Waktu terakhir record diperbarui.  |
-
-#### Tabel `questions`
-*   **Tujuan:** Menyimpan daftar pertanyaan untuk setiap kuesioner.
-*   **Migrasi:** `2026_05_07_162156_create_tracer_questions_table.php`
-| Kolom             | Tipe Data                      | Deskripsi                                      |
-| :---------------- | :----------------------------- | :--------------------------------------------- |
-| `id`              | `BIGINT UNSIGNED AUTO_INCREMENT` | Primary Key.                                   |
-| `questionnaire_id`| `BIGINT UNSIGNED`              | Foreign Key ke `questionnaires.id`.            |
-| `parent_id`       | `BIGINT UNSIGNED NULL`         | Foreign Key ke `questions.id` (untuk sub-pertanyaan).|
-| `kode`            | `VARCHAR(255) UNIQUE`          | Kode unik pertanyaan (e.g., f8, f502).         |
-| `text`            | `TEXT`                         | Isi atau teks pertanyaan.                      |
-| `type`            | `ENUM('text', 'number', 'radio', 'checkbox', 'dropdown')` | Tipe input jawaban.              |
-| `order`           | `INTEGER DEFAULT 0`            | Urutan pertanyaan.                             |
-| `is_required`     | `BOOLEAN DEFAULT TRUE`         | Apakah pertanyaan wajib diisi.                 |
-| `created_at`      | `TIMESTAMP NULL`               | Waktu pembuatan record.                        |
-| `updated_at`      | `TIMESTAMP NULL`               | Waktu terakhir record diperbarui.              |
-*   **Relasi:**
-    *   `questions.questionnaire_id` `REFERENCES` `questionnaires.id` `ON DELETE CASCADE`.
-    *   `questions.parent_id` `REFERENCES` `questions.id` `ON DELETE CASCADE`.
-
-#### Tabel `question_options`
-*   **Tujuan:** Menyimpan pilihan jawaban untuk pertanyaan bertipe `radio`, `checkbox`, atau `dropdown`.
-*   **Migrasi:** `2026_05_07_162156_create_tracer_questions_table.php`
-| Kolom         | Tipe Data                      | Deskripsi                                      |
-| :------------ | :----------------------------- | :--------------------------------------------- |
-| `id`          | `BIGINT UNSIGNED AUTO_INCREMENT` | Primary Key.                                   |
-| `question_id` | `BIGINT UNSIGNED`              | Foreign Key ke `questions.id`.                 |
-| `option_text` | `VARCHAR(255)`                 | T
----
-
-## 10. Keamanan & Validasi
-
-1.  **Otorisasi Berbasis Policy:** Setiap akses ke resource sensitif dicek melalui `App\Policies`. Misalnya, pengguna tidak bisa mengubah profil alumni orang lain.
-2.  **Validasi Request:** Menggunakan `FormRequest` (seperti `LoginRequest`) untuk memastikan data yang masuk ke controller sudah bersih dan sesuai format.
-3.  **Sanctum Token Hashing:** Token yang disimpan di database di-hash, sehingga aman jika database terekspos.
-4.  **CORS:** Pastikan `config/cors.php` diatur untuk mengizinkan domain Next.js Anda.
-
----
-
-## 11. Cara Menjalankan Project (Local)
-
-1.  **Clone Repository**
-2.  **Install Dependensi:** `composer install`
-3.  **Setup Environment:** `cp .env.example .env` dan sesuaikan `DB_DATABASE`, `DB_USERNAME`, dll.
-4.  **Generate Key:** `php artisan key:generate`
-5.  **Migrate Database:** `php artisan migrate --seed`
-6.  **Run Server:** `php artisan serve`
-7.  **Symlink Storage:** `php artisan storage:link` (Penting untuk upload foto profile/thumbnail).
-
----
-
-## 12. Kesimpulan
-
-Proyek `BETracerStudy` dirancang dengan arsitektur yang sangat modular. Penggunaan **Repository Pattern** memungkinkan Anda untuk mengganti database atau sumber data di masa depan tanpa merusak logika bisnis di **Service Layer**. Integrasi dengan **Firebase** di sisi frontend sangat dimungkinkan dan disarankan untuk kemudahan login sosial (Google), selama backend tetap berfungsi sebagai verifikator akhir dan penyedia token sesi (Sanctum).
-
----
-*Dokumentasi ini bersifat dinamis dan harus diperbarui setiap ada perubahan signifikan pada skema database atau kontrak API.*
+*Dokumentasi ini bersifat teknis untuk pengembang backend dan frontend.*

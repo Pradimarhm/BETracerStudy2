@@ -28,7 +28,7 @@ class AlumniResource extends JsonResource
             'npwp' => $this->npwp,
             'phone_number' => $showPhone ? $this->phone_number : 'Private',
             'img_profile' => $this->img_profile ? Storage::url($this->img_profile) : null,
-            'privacy_settings' => $this->privacy_settings,
+            'privacy_settings' => $this->privacy_settings ?? 'public',
             'tahun_lulus' => $this->tahun_lulus,
             'kdpstmsmh' => $this->kdpstmsmh,
             'status' => $this->status,

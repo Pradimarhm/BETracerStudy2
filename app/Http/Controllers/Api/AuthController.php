@@ -42,9 +42,9 @@ class AuthController extends Controller
 {
     /** @var \App\Models\User $user */
     $user = Auth::user();
-    
+
     $user->tokens()->delete();
-    
+
     return response()->json(['message' => 'Berhasil logout']);
 }
 }

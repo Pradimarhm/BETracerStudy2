@@ -50,7 +50,7 @@ Route::middleware('auth:sanctum')->group(function () {
     | Admin Only Routes (Hanya Role Admin)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware('role:admin')->prefix("admin")->group(function () {
 
         // Kelola User (CRUD Admin)
         Route::apiResource('users', UserController::class);

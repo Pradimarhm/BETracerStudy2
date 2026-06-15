@@ -26,10 +26,11 @@ class QuestionnaireController extends Controller
     public function index(): JsonResponse
     {
         $questionnaires = $this->service->getActiveQuestionnaire();
-        
+
         return response()->json([
             'success' => true,
-            'data' => QuestionnaireResource::collection($questionnaires)
+            // 'data' => QuestionnaireResource::collection($questionnaires)
+            'data' => $questionnaires ? new QuestionnaireResource($questionnaires) : null
         ]);
     }
 
@@ -39,7 +40,7 @@ class QuestionnaireController extends Controller
     public function storeAnswers(SubmitAnswerRequest $request): JsonResponse
     {
         $this->service->submitAnswers(
-            Auth::id(), 
+            Auth::id(),
             $request->validated()['answers']
         );
 

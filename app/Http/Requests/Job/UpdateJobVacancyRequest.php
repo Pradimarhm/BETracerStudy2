@@ -12,7 +12,20 @@ class UpdateJobVacancyRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('job_vacancy'));
+        // return $this->user()->can('update', $this->route('job_vacancy'));
+        // 1. Ambil ID dari rute URL (/api/jobs/{id})
+        $jobId = $this->route('id');
+
+        // 2. Ambil data modelnya dari database berdasarkan ID tersebut
+        $jobVacancy = \App\Models\JobVacancy::find($jobId);
+
+        // 3. Jika data tidak ada di DB, tolak langsung (403/404)
+        if (!$jobVacancy) {
+            return false;
+        }
+
+        // 4. Kirim objek model utuh ke Policy untuk dicek hak aksesnya
+        return $this->user()->can('update', $jobVacancy);
     }
 
     /**

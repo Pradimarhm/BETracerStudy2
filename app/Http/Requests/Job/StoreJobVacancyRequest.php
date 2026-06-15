@@ -5,6 +5,7 @@ namespace App\Http\Requests\Job;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
+
 class StoreJobVacancyRequest extends FormRequest
 {
     /**
