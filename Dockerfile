@@ -1,6 +1,6 @@
 FROM php:8.2-fpm
 
-# Install dependencies
+# Install dependencies (imgsmtp sudah dihapus)
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpng-dev \
@@ -8,10 +8,9 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     locales \
     zip \
-    jpegoptim optipng pngquant imgsmtp \
+    jpegoptim optipng pngquant \
     git \
     curl \
-    lua-zlib-dev \
     libzip-dev \
     libpq-dev \
     nginx
