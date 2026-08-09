@@ -14,14 +14,21 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-        $table->id();
-        $table->string('username')->unique(); // Tambahan sesuai ERD
-        $table->string('email')->unique();
-        $table->string('password');
-        $table->enum('role', ['admin', 'alumni']); // Tambahan sesuai ERD[cite: 1]
-        $table->timestamp('last_login_at')->nullable(); // Tambahan sesuai ERD[cite: 1]
-        $table->rememberToken();
-        $table->timestamps();
+            $table->id();
+            $table->string('username')->unique(); // Tambahan sesuai ERD
+            $table->string('email')->unique();
+            // $table->string('username'); // Tambahan sesuai ERD
+            // $table->string('email');
+
+            $table->string('password');
+            // $table->enum('role', ['alumni']); // Tambahan sesuai ERD[cite: 1]
+            $table->string('role')->default('alumni');
+            $table->timestamp('last_login_at')->nullable(); // Tambahan sesuai ERD[cite: 1]
+            $table->rememberToken();
+            $table->timestamps();
+
+            // $table->unique('username');
+            // $table->unique('email');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
@@ -35,7 +42,8 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->index();
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
-            $table->longText('payload');
+            // $table->longText('payload');
+            $table->text('payload');
             $table->integer('last_activity')->index();
         });
     }
