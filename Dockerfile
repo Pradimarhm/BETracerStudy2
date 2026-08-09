@@ -1,6 +1,6 @@
-FROM php:8.2-fpm
+FROM php:8.3-fpm
 
-# Install dependencies (imgsmtp sudah dihapus)
+# Install dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpng-dev \
