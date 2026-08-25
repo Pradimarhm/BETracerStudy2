@@ -21,8 +21,9 @@ class AlumniResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'user_id' => $this->user->id ?? null,
             'nim' => $this->nim,
-            'name' => $this->user->username, // Mengambil data terbaru dari tabel users
+            'name' => $this->name, // Mengambil data terbaru dari tabel users
             'email' => $this->user->email,   // Mengambil data terbaru dari tabel users
             'nik' => $this->nik,
             'npwp' => $this->npwp,
