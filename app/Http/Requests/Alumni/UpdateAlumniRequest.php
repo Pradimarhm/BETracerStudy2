@@ -13,7 +13,8 @@ class UpdateAlumniRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return Auth::check();
+        // return Auth::check();
+        return true;
     }
 
     /**
