@@ -1,10 +1,12 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Middleware\RoleMiddleware;
 
 // controller yang ada di admin
 use App\Http\Controllers\Api\Admin\{
     AdminAlumniController,
+    AdminProfileController,
 };
 
 use App\Http\Controllers\Api\Alumni\{
@@ -13,7 +15,6 @@ use App\Http\Controllers\Api\Alumni\{
 
 use App\Http\Controllers\Api\Superadmin\{
     AdminManagementController,
-    AdminProfileController,
 };
 
 use App\Http\Controllers\Api\{
